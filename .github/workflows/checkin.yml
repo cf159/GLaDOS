@@ -1,37 +1,39 @@
-name: glados-checkin
-
+name: GLaDOS-CheckIn
 on:
+  workflow_dispatch:
   push:
-    branches: [ master ]
-  pull_request:
-    branches: [ master ]
+    branches: [ main ]
+    paths-ignore: 
+      - 'README.md'
+      - 'imgs/**'
   schedule:
-    - cron:  00 15 * * *
-      # https://tool.lu/crontab/
-  #watch:
-  #    types: started
-
+    - cron: 30 1 * * *
+  watch:
+    types: [started]
 jobs:
-  checkin:
+  build:
     runs-on: ubuntu-latest
-    #if: github.event.repository.owner.id == github.event.sender.id
-    # https://p3terx.com/archives/github-actions-manual-trigger.html
-
     steps:
-    - uses: actions/checkout@v2
-
-    - name: Install Python
-      run: |
-        sudo apt update && \
-        sudo apt install python3
-
-    - name: requirements
-      run: |
-        pip3 install -r requirements.txt
-    - name: Checkin
-      run: |
-        python3 checkin.py
-      env:
-        EMAIL: ${{ secrets.EMAIL }}
-        PASSWORD: ${{ secrets.PASSWORD }}
-        POP3_SERVER: ${{ secrets.POP3_SERVER }}
+      - uses: actions/checkout@v2
+      - name: setup Node.js
+        uses: actions/setup-node@v1
+        with:
+          node-version: '14.x'
+      - name: install axios
+        run: npm install axios
+      - name: install puppeteer-extra-plugin-stealth
+        run: npm install puppeteer puppeteer-extra puppeteer-extra-plugin-stealth
+      - name: CheckIn
+        run: node checkin.js
+        env:
+          PUSHPLUS: ${{ secrets.PUSHPLUS }}
+          COOKIES: ${{ secrets.COOKIES }}
+      - name: keep alive
+        uses: gautamkrishnar/keepalive-workflow@master # using the workflow with default settings
+      - name: Delete workflow runs
+        uses: Mattraks/delete-workflow-runs@v2
+        with:
+          token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          retain_days: 0
+          keep_minimum_runs: 10
